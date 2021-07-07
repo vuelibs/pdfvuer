@@ -2,6 +2,8 @@
 
 > A PDF viewer for Vue using Mozilla's PDF.js
 
+[![npm version](https://badge.fury.io/js/pdfvuer.svg)](https://badge.fury.io/js/pdfvuer)
+
 ## Install
 ```
 npm install --save pdfvuer
@@ -10,11 +12,16 @@ npm install --save pdfvuer
 ## Example - basic
 ```vue
 <template>
-  <pdf src="./static/relativity.pdf" :page=1></pdf>
+  <pdf src="./static/relativity.pdf" :page="1">
+    <template slot="loading">
+      loading content here...
+    </template>
+  </pdf>
 </template>
 
 <script>
 import pdf from 'pdfvuer'
+import 'pdfjs-dist/build/pdf.worker.entry'
 
 export default {
   components: {
@@ -41,13 +48,34 @@ export default {
         <i class="right chevron icon"></i>
       </a>
     </div>
+    <div id="buttons" class="ui grey three item inverted bottom fixed menu transition hidden">
+      <a class="item" @click="scale -= scale > 0.2 ? 0.1 : 0">
+        <i class="left chevron icon" />
+          Zoom -
+      </a>
+      <a class="ui active item">
+        {{ formattedZoom }} %
+      </a>
+      <a class="item" @click="scale += scale < 2 ? 0.1 : 0">
+        Zoom +
+        <i class="right chevron icon" />
+      </a>
+    </div>
     <pdf :src="pdfdata" v-for="i in numPages" :key="i" :id="i" :page="i"
-      :scale="scale" style="width:100%;margin:20px auto;"></pdf>
+      :scale.sync="scale" style="width:100%;margin:20px auto;"
+        :annotation="true"
+        :resize="true"
+        @link-clicked="handle_pdf_link">
+      <template slot="loading">
+        loading content here...
+      </template>
+    </pdf>
   </div>
 </template>
 
 <script>
 import pdfvuer from 'pdfvuer'
+import 'pdfjs-dist/build/pdf.worker.entry'
 
 export default {
   components: {
@@ -61,6 +89,11 @@ export default {
       errors: [],
       scale: 'page-width'
     }
+  },
+  computed: {
+    formattedZoom () {
+        return Number.parseInt(this.scale * 100);
+    },
   },
   mounted () {
     this.getPdf()
@@ -79,6 +112,12 @@ export default {
     }
   },
   methods: {
+    handle_pdf_link: function (params) {
+      // Scroll to the appropriate place on our page - the Y component of
+      // params.destArray * (div height / ???), from the bottom of the page div
+      var page = document.getElementById(String(params.pageNumber));
+      page.scrollIntoView();
+    },
     getPdf () {
       var self = this;
       self.pdfdata = pdfvuer.createLoadingTask('./static/relativity.pdf');
@@ -122,7 +161,7 @@ export default {
   }
 }
 </script>
-
+<style src="pdfvuer/dist/pdfvuer.css"></style>
 <style lang="css" scoped>
   #buttons {
     margin-left: 0 !important;
@@ -149,14 +188,44 @@ The page number to display.
 #### :rotate <sup>Number - default: 0<sup>
 The page rotation in degrees, only multiple of 90 are valid.
 
-#### :scale <sup>Number / String - default: 'page-width'</sup>
+#### :scale <sup>Number / String - default: 'page-width' - .sync</sup>
 The scaling factor. By default, the pdf will be scaled to match the page width
 with the container width.
+When passed value `page-width` and / or using `resize` prop, will send back the scale
+computed accordingly via `update:scale` event (use it with `scale.sync="scale"`)
+
+#### :resize <sup>Boolean - default: false</sup>
+Enable Auto Resizing on window resize. By default, autoresizing is disabled.
+
+#### :annotation <sup>Boolean - default: false</sup>
+Show the annotations in the pdf. By default, annotation layer is disabled.
+
+#### :text <sup>Boolean - default: true</sup>
+Show the text layer in the pdf. By default, text layer is enabled.
 
 ### Events
 
 #### @numpages <sup>Number<sup>
 The total number of pages of the pdf.
+
+#### @loading <sup>Boolean<sup>
+The provided PDF's loading state
+
+#### @error <sup>Function<sup>
+Function handler for errors occurred during loading/drawing PDF source.
+
+#### @link-clicked <sup>Function<sup>
+Function handler for errors occurred during loading/drawing PDF source.
+Example:
+```js
+    handle_pdf_link: function (params) {
+      // Scroll to the appropriate place on our page - the Y component of
+      // params.destArray * (div height / ???), from the bottom of the page div
+      var page = document.getElementById(String(params.pageNumber));
+      page.scrollIntoView();
+    }
+```
+
 
 ### Public static methods
 
@@ -166,9 +235,9 @@ The total number of pages of the pdf.
 
 ## Public Demo
 
-Advanced Example - [https://blog.koley.in/pdfvuer](https://blog.koley.in/pdfvuer)
+Advanced Example - [https://arkokoley.github.io/pdfvuer](https://arkokoley.github.io/pdfvuer)
 
-[Used in production by Gratiato](https://goodwill.zense.co.in/resources/1)
+[Used in production by  Gratia](https://goodwill.zense.co.in/resources/1)
 
 > Made with :heart: at [IIIT Bangalore](http://iiitb.ac.in)
 
